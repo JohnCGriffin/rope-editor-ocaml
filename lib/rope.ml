@@ -103,8 +103,9 @@ let rec sub (r:t) pos len : Ustring.t =
      
 
 let leaves = List.map (fun text -> Leaf (Ustring.of_string text))
-               ["Once"; "upon"; "a"; "time"; "there";
-                "were"; "three"; "little"; "girls" ]
+               ["Once "; "upon "; "a "; "time "; "there ";
+                "were "; "three "; "little "; "girls scared of 💀. ";
+                "However, the sun 🌞 came out and they were 👍!"]
 
 let tree = build_rope leaves
 

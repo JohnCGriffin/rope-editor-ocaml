@@ -1,4 +1,7 @@
+
 type t
+= { bytes:string }
+
 
 val of_string : string -> t
 val string_of : t -> string
