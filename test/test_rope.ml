@@ -109,6 +109,50 @@ let () = Alcotest.run "Rope" [
       Alcotest.(check int) "line_count" 2 (Rope.line_count r'));
   ];
 
+  "delete", [
+    Alcotest.test_case "single-line middle" `Quick (fun () ->
+      let r = line "hello world" in
+      let r' = Rope.delete r (loc 0 5) (loc 0 6) in
+      Alcotest.(check string) "result" "helloworld" (str r'));
+
+    Alcotest.test_case "single-line from start" `Quick (fun () ->
+      let r = line "hello" in
+      let r' = Rope.delete r (loc 0 0) (loc 0 2) in
+      Alcotest.(check string) "result" "llo" (str r'));
+
+    Alcotest.test_case "single-line to end" `Quick (fun () ->
+      let r = line "hello" in
+      let r' = Rope.delete r (loc 0 3) (loc 0 5) in
+      Alcotest.(check string) "result" "hel" (str r'));
+
+    Alcotest.test_case "single-line empty range is a no-op" `Quick (fun () ->
+      let r = Rope.build_rope [line "foo\n"; line "bar"] in
+      let r' = Rope.delete r (loc 0 2) (loc 0 2) in
+      Alcotest.(check string) "unchanged" "foo\nbar" (str r'));
+
+    Alcotest.test_case "multi-line adjacent lines are merged" `Quick (fun () ->
+      (* delete (0,3) inclusive to (1,1) exclusive: removes \n and 'b' *)
+      let r = Rope.build_rope [line "foo\n"; line "bar"] in
+      let r' = Rope.delete r (loc 0 3) (loc 1 1) in
+      Alcotest.(check int) "line_count" 1 (Rope.line_count r');
+      Alcotest.(check string) "result" "fooar" (str r'));
+
+    Alcotest.test_case "multi-line skips intermediate line" `Quick (fun () ->
+      (* keep "a" from line 0, drop line 1, keep "i" from line 2 *)
+      let r = Rope.build_rope [line "abc\n"; line "def\n"; line "ghi"] in
+      let r' = Rope.delete r (loc 0 1) (loc 2 2) in
+      Alcotest.(check int) "line_count" 1 (Rope.line_count r');
+      Alcotest.(check string) "result" "ai" (str r'));
+
+    Alcotest.test_case "multi-line preserves lines outside range" `Quick (fun () ->
+      let r = Rope.build_rope [line "aaa\n"; line "bbb\n"; line "ccc\n"; line "ddd"] in
+      let r' = Rope.delete r (loc 1 1) (loc 2 2) in
+      Alcotest.(check int) "line_count" 3 (Rope.line_count r');
+      Alcotest.(check string) "line 0" "aaa\n" (line_str r' 0);
+      Alcotest.(check string) "line 1" "bc\n" (line_str r' 1);
+      Alcotest.(check string) "line 2" "ddd" (line_str r' 2));
+  ];
+
   "depth", [
     Alcotest.test_case "single Line has depth 1" `Quick (fun () ->
       Alcotest.(check int) "1" 1 (Rope.depth (line "x")));

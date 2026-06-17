@@ -5,10 +5,13 @@ type t =
   | Node of { left:t;  right:t; line_count:int; char_count:int }
 
 type location = { line_offset:int; char_offset:int }
-            
+
 open Printf
 
 let location_of l c = { line_offset=l; char_offset=c }
+
+let location_less a b =
+  a.line_offset < b.line_offset || (a.line_offset = b.line_offset && a.char_offset < b.char_offset)
 
 let line_count (r:t) : int =
   match r with
@@ -67,17 +70,7 @@ let rec build_rope (ropes:t list) : t =
        | l::r::t -> aux t ((node_of l r)::acc)
      in
      build_rope (aux ropes [])
-  
-let insert (r:t) loc (text:Ustring.t) =
-  let old_text = line_at r loc in
-  let left = Ustring.sub old_text 0 loc.char_offset in
-  let right_len = (Ustring.length old_text) - loc.char_offset in
-  let right = Ustring.sub old_text loc.char_offset right_len in
-  let new_text = Ustring.concatenate [left; text; right] in
-  let multiple_strings = Ustring.split_with_nl new_text in
-  let ropes = List.map (fun text -> Line text) multiple_strings in
-  let sub_rope = build_rope ropes in
-  replace_line r loc.line_offset sub_rope
+
 
 let leaves_of (r:t) : (t list) =
   let acc  = ref ([]:t list) in
@@ -100,6 +93,54 @@ let string_of (r:t) : string =
   in
   String.concat "" strs
 
+let insert (r:t) loc (text:Ustring.t) =
+  let old_text = line_at r loc in
+  let left = Ustring.sub old_text 0 loc.char_offset in
+  let right_len = (Ustring.length old_text) - loc.char_offset in
+  let right = Ustring.sub old_text loc.char_offset right_len in
+  let new_text = Ustring.concatenate [left; text; right] in
+  let multiple_strings = Ustring.split_with_nl new_text in
+  let ropes = List.map (fun text -> Line text) multiple_strings in
+  let sub_rope = build_rope ropes in
+  replace_line r loc.line_offset sub_rope
+
+let delete (r:t) (a:location) (b:location) : t =
+  let a,b = if a<b then a,b else b,a in
+  if a.line_offset = b.line_offset then 
+    let text = line_at r a in
+    let left = Ustring.sub text 0 a.char_offset in
+    let right_len = Ustring.length text - b.char_offset in
+    let right = Ustring.sub text b.char_offset right_len in
+    let new_text = Ustring.concatenate [left; right] in
+    let sub_rope = Line new_text in
+    replace_line r a.line_offset sub_rope
+  else 
+    let rec loop leaves line_offset collector a_left =
+      match leaves with
+      | [] -> build_rope (List.rev collector)
+      | head::tail when line_offset = a.line_offset ->
+         (match head with
+          | Line ustr ->
+             let left = Ustring.sub ustr 0 a.char_offset in
+             loop tail (line_offset+1) collector (Some left)
+          | _ -> failwith "expected line")
+      | head::tail when line_offset = b.line_offset ->
+         (match head with
+          | Line ustr ->
+             let right = Ustring.sub ustr b.char_offset (Ustring.length ustr - b.char_offset) in
+             let merged = match a_left with
+               | Some left -> Ustring.concatenate [left; right]
+               | None -> right
+             in
+             loop tail (line_offset+1) (Line merged :: collector) None
+          | _ -> failwith "expected line")
+      | _::tail when line_offset > a.line_offset && line_offset < b.line_offset ->
+         loop tail (line_offset+1) collector a_left
+      | head::tail -> loop tail (line_offset+1) (head :: collector) a_left
+    in
+    loop (leaves_of r) 0 [] None
+
+
 
 let leaves = List.map (fun text -> Line (Ustring.of_string text))
                ["Once "; "upon "; "a "; "time "; "there ";
@@ -107,4 +148,8 @@ let leaves = List.map (fun text -> Line (Ustring.of_string text))
                 "However, the sun 🌞 came out and they were 👍!"]
 
 let tree = build_rope leaves
+let tree_inserted_at_3_2_ralph = insert tree (location_of 3 2) (Ustring.of_string "ralph")
+let tree_deleted = delete tree_inserted_at_3_2_ralph (location_of 5 1) (location_of 6 2)
+
+
 
