@@ -1,75 +1,89 @@
 
 
 type t = 
-  | Leaf of Ustring.t
-  | Node of { left:t;  right:t; len:int; }
+  | Line of Ustring.t
+  | Node of { left:t;  right:t; line_count:int; char_count:int }
 
+type location = { line_offset:int; char_offset:int }
             
 open Printf
 
-let node_of left right len : t =
-  Node { left; right; len }
+let location_of l c = { line_offset=l; char_offset=c }
 
-let length (r:t) : int =
+let line_count (r:t) : int =
   match r with
-  | Leaf us -> (Ustring.length us)
-  | Node n -> n.len
+  | Line _ -> 1
+  | Node n -> n.line_count
+
+let char_count (r:t) : int =
+  match r with
+  | Line ln -> Ustring.length ln
+  | Node n -> n.char_count
 
 let rec depth (r:t) : int =
   match r with
-  | Leaf _ -> 1
+  | Line _ -> 1
   | Node n -> 1 + max (depth n.left) (depth n.right)
 
-let concatenate (left:t) (right:t)  =
-  let len = (length left) + (length right) in
-  Node { left; right; len }
+let node_of (left:t) (right:t) =
+  let line_count = (line_count left) + (line_count right) in
+  let char_count = (char_count left) + (char_count right) in
+  Node { left; right; line_count; char_count }
 
-let rec char_at (r:t) (ndx:int) : Uchar.t =
-  if ndx < 0 || ndx >= length r then
-    failwith (sprintf "ndx %d outside [0..%d]" ndx ((length r)-1));
+let rec line_at r loc : Ustring.t =
+  let ndx = loc.line_offset in
+  if ndx < 0 || ndx >= (line_count r) then
+    failwith (sprintf "ndx %d outside [0..%d]" ndx (line_count r));
   match r with
-  | (Leaf s) -> Ustring.get s ndx
-  | (Node n) when ndx < (length n.left) -> char_at n.left ndx
-  | Node n -> char_at n.right (ndx - length n.left)
+  | (Line text) -> text
+  | (Node n) when ndx < (line_count n.left) -> line_at n.left loc
+  | (Node n) -> line_at n.right { line_offset = ndx - line_count n.left; char_offset = 0}
 
-let rec insert (r:t) (ndx:int) (text:string) : t =
-  if ndx < 0 || ndx > length r then
-    failwith (sprintf "ndx %d outside [0..%d]" ndx (length r));
+let rec replace_line r line_offset sub_rope : t =
   match r with
-  | (Leaf s) ->
-     let slen = Ustring.length s in
-     let left_part = Ustring.sub s 0 ndx in
-     let right_part = Ustring.sub s ndx (slen-ndx) in
-     Leaf (Ustring.concatenate [ left_part; Ustring.of_string(text); right_part ])
-  | (Node n) when ndx < (length n.left) ->
-     let left = insert n.left ndx text in
+  | Line _ -> sub_rope
+  | (Node n) when line_offset < (line_count n.left) ->
      let right = n.right in
-     let len = length left + length right in
-     Node { left; right; len }
+     let left = replace_line n.left line_offset sub_rope in
+     let line_count = (line_count left) + (line_count right) in
+     let char_count = (char_count left) + (char_count right) in
+     Node { left; right; char_count; line_count }
   | (Node n) ->
+     let right = replace_line n.right (line_offset - line_count n.left) sub_rope in
      let left = n.left in
-     let right = insert n.right (ndx - length n.left) text in
-     let len = length left + length right in
-     Node { left; right; len }
+     let line_count = (line_count left) + (line_count right) in
+     let char_count = (char_count left) + (char_count right) in
+     Node { left; right; char_count; line_count }
 
 let rec build_rope (ropes:t list) : t =
   match ropes with
-  | [] -> Leaf (Ustring.of_string(""))
+  | [] -> Line (Ustring.of_string(""))
   | [single] -> single
   | _ -> 
      let rec aux (ropes:t list) acc =
        match ropes with
        | [] -> List.rev acc
        | h::[] -> List.rev (h::acc)
-       | l::r::t -> aux t ((concatenate l r)::acc)
+       | l::r::t -> aux t ((node_of l r)::acc)
      in
      build_rope (aux ropes [])
   
+let insert (r:t) loc (text:Ustring.t) =
+  let old_text = line_at r loc in
+  let left = Ustring.sub old_text 0 loc.char_offset in
+  let right_len = (Ustring.length old_text) - loc.char_offset in
+  let right = Ustring.sub old_text loc.char_offset right_len in
+  let new_text = Ustring.concatenate [left; text; right] in
+  let multiple_strings = Ustring.split_with_nl new_text in
+  let ropes = List.map (fun text -> Line text) multiple_strings in
+  let sub_rope = build_rope ropes in
+  replace_line r loc.line_offset sub_rope
+
 let leaves_of (r:t) : (t list) =
   let acc  = ref ([]:t list) in
   let rec visit (r:t) : unit =
     match r with
-    | Leaf s -> acc := (Leaf s) :: !acc
+    | Line s -> acc := (Line s) :: !acc
     | Node n -> visit n.left; visit n.right
   in
   visit r;
@@ -80,37 +94,17 @@ let string_of (r:t) : string =
   let strs =
     List.map (fun r ->
         match r with
-        | Leaf s -> Ustring.string_of s
+        | Line s -> Ustring.string_of s
         | Node _ -> failwith "unexpected non-Leaf in leaves")
       leaves
   in
   String.concat "" strs
 
-let rec sub (r:t) pos len : Ustring.t =
-  if pos + len > length r then
-    invalid_arg (sprintf "(sub rope %d %d) exceeds rope length %d"
-                   pos len (length r));
 
-  match r with
-  | (Leaf s) ->
-     Ustring.sub s pos len
-  | (Node n) when (pos+len) <= (length n.left) ->
-     sub n.left pos len
-  | (Node n) when (length n.left) <= pos ->
-     sub n.right (pos - (length n.left)) len
-  | (Node n) ->
-     let left_len = length n.left in
-     let left_part  = sub n.left pos (left_len - pos) in
-     let right_part = sub n.right 0 (pos + len - left_len) in
-     Ustring.concatenate [left_part; right_part]
-     
-
-let leaves = List.map (fun text -> Leaf (Ustring.of_string text))
+let leaves = List.map (fun text -> Line (Ustring.of_string text))
                ["Once "; "upon "; "a "; "time "; "there ";
                 "were "; "three "; "little "; "girls scared of 💀. ";
                 "However, the sun 🌞 came out and they were 👍!"]
 
 let tree = build_rope leaves
-
-
 

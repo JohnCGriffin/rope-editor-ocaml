@@ -9,3 +9,4 @@ val length : t -> int
 val get : t -> int -> Uchar.t
 val sub : t -> int -> int -> t
 val concatenate : t list -> t
+val split_with_nl : t -> t list

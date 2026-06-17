@@ -58,3 +58,22 @@ let concatenate (ts:t list) : t =
   let unicode_len = unicode_length bytes in
   { bytes; unicode_len }
     
+let split_with_nl (text:t) : (t list) =
+  let bytes = text.bytes in
+  let lines = ref [] in
+  let buf = Buffer.create 256 in
+  for i=0 to String.length bytes - 1 do
+    let ch = String.get bytes i in
+    Buffer.add_char buf ch;
+    if ch = (Char.chr 10) then (
+      let u = of_string (Buffer.contents buf) in
+      lines := u :: !lines;
+      Buffer.clear buf
+    );
+  done;
+  if Buffer.length buf > 0 then (
+    let u = of_string (Buffer.contents buf) in
+    lines := u :: !lines
+  );
+  List.rev !lines
+
