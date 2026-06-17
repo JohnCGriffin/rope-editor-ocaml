@@ -1,6 +1,6 @@
 
 type t
-= { bytes:string }
+= { bytes:string; unicode_len:int }
 
 
 val of_string : string -> t

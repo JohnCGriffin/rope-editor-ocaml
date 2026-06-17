@@ -33,7 +33,7 @@ let rec char_at (r:t) (ndx:int) : Uchar.t =
   | Node n -> char_at n.right (ndx - length n.left)
 
 let rec insert (r:t) (ndx:int) (text:string) : t =
-  if ndx < 0 || ndx >= length r then
+  if ndx < 0 || ndx > length r then
     failwith (sprintf "ndx %d outside [0..%d]" ndx (length r));
   match r with
   | (Leaf s) ->
@@ -99,7 +99,10 @@ let rec sub (r:t) pos len : Ustring.t =
   | (Node n) when (length n.left) <= pos ->
      sub n.right (pos - (length n.left)) len
   | (Node n) ->
-     sub n.left pos len
+     let left_len = length n.left in
+     let left_part  = sub n.left pos (left_len - pos) in
+     let right_part = sub n.right 0 (pos + len - left_len) in
+     Ustring.concatenate [left_part; right_part]
      
 
 let leaves = List.map (fun text -> Leaf (Ustring.of_string text))
