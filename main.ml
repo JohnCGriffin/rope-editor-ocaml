@@ -11,7 +11,8 @@ let main w raw_bytes : unit =
   let r = Ropes.Rope.build_rope leaves in
   let e:Model.t = { rope=r; loc=Rope.location_of 0 0; top_offset = 0 } in
   let rec loop e : unit =
-    View.view w e;
+    let top_offset = View.view w e in
+    let e = { e with top_offset } in
     ignore(refresh());
     let ch = getch() in
     match keyname(ch) with
