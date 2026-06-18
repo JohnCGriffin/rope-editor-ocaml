@@ -1,4 +1,4 @@
-open Printf
+
 open Curses
 open Ropes
 
@@ -24,8 +24,6 @@ let get_desired_top_lines w (e:Model.t) : int =
     Rope.line_at e.rope loc |> height_of
   in
   let line_lengths = List.rev (List.init requested length_at) in
-  ignore(wmove w (screen_lines-1) 0);
-  ignore(waddstr w (sprintf "requested = %d, sum=%d" requested (List.fold_left (+) 0 line_lengths)));
   let rec loop lengths =
     match lengths with
     | [] -> 0
@@ -39,39 +37,51 @@ let get_desired_top_lines w (e:Model.t) : int =
   loop line_lengths
 
 
-let view w (e:Model.t) : int =
-  ignore(werase w);
+let view (e:Model.t) : int =
+  let windows = Windows.get() in
+  let edit_w = windows.edit_w in
+  ignore(werase edit_w);
   let active_ndx = e.loc.line_offset in
   let line_count = Rope.line_count e.rope in
-  let screen_lines,screen_cols = getmaxyx w in
-  let desired_top_lines = get_desired_top_lines w e |> max 0 |> min (screen_lines/2) in
+  let screen_lines,_ = getmaxyx edit_w in
+  let desired_top_lines = get_desired_top_lines edit_w e |> max 0 |> min (screen_lines/2) in
   let top_ndx = max 0 (active_ndx - desired_top_lines) in
   let cursor_x = ref 0 in
   let cursor_y = ref 0 in
   let rec loop screen_line ndx : unit =
-    if screen_line < screen_lines-1 && ndx < line_count then (
+    if screen_line < screen_lines && ndx < line_count then (
       let loc = Model.location_of ndx 0 in
       let utext = Rope.line_at e.rope loc |> without_nl in
       let stext = Ustring.string_of utext in
+
+      (* This is intended to draw the current line up to the
+         char_offset, then remember the position for final
+         placement of cursor *)
       if ndx = active_ndx then (
-        ignore(wmove w screen_line 0);
+        ignore(wmove edit_w screen_line 0);
         let subtext = Ustring.sub utext 0 e.loc.char_offset |> Ustring.string_of in
-        ignore(waddstr w subtext);
-        let y,x = getyx w in
-        let offset_y, offset_x = getbegyx w in
-        cursor_x := x + offset_x;
-        cursor_y := y + offset_y;
+        ignore(waddstr edit_w subtext);
+        let y,x = getyx edit_w in
+        let _,begin_x = getbegyx edit_w in
+        cursor_x := x + begin_x;
+        cursor_y := y;
       );
-      ignore(wmove w screen_line 0);
-      ignore(waddstr w stext);
-      let y,_ = getyx w in
+      
+      ignore(wmove edit_w screen_line 0);
+      ignore(waddstr edit_w stext);
+      let y,_ = getyx edit_w in
       loop (y+1) (ndx+1)
     )
   in
   loop 0 top_ndx;
-  ignore(wmove w 0 (screen_cols-20));
-  ignore(waddstr w (sprintf "[%d,%d,%d,%d]"
-                      e.loc.line_offset e.loc.char_offset desired_top_lines e.top_offset));
-  ignore(move !cursor_y !cursor_x);
+  let status_w = windows.status_w in
+
+  ignore(wstandout status_w);
+  ignore(werase status_w);
+  ignore(wmove status_w 0 0);
+  ignore(waddstr status_w (Printf.sprintf "location: %d %d" e.loc.line_offset e.loc.char_offset));
+  ignore(wstandend status_w);
+
+  Windows.refresh ~cursor_y:!cursor_y ~cursor_x:!cursor_x ();
   desired_top_lines
 
