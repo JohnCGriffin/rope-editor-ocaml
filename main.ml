@@ -35,6 +35,7 @@ let () =
   ignore(keypad win true);
   ignore(noecho());
   ignore(cbreak());
+  ignore(curs_set 1);
   main win raw_bytes;
   ignore(endwin())
 
