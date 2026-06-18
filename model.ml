@@ -42,5 +42,15 @@ let move_up (e:t) : t =
     { e with loc; top_offset }
   else
     e
+
+let move_top (e:t) : t =
+  let loc = location_of 0 0 in
+  { e with loc }
                 
-  
+let move_bottom (e:t) : t =
+  let line_count = Rope.line_count e.rope in
+  let loc = location_of (line_count-1) 0 in
+  let text = Rope.line_at e.rope loc in
+  let char_offset = Ustring.length text in
+  let loc = { loc with char_offset } in
+  { e with loc; top_offset = 10 }

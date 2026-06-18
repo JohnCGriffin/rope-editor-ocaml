@@ -19,6 +19,8 @@ let main raw_bytes : unit =
     | "KEY_RIGHT" -> loop (move_right e)
     | "KEY_UP" -> loop (move_up e)
     | "KEY_LEFT" -> loop (move_left e)
+    | "KEY_HOME" -> loop (move_top e)
+    | "KEY_END" -> loop (move_bottom e)
     | _ -> ()
   in
   loop e
