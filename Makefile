@@ -6,9 +6,6 @@ run: build
 build:
 	dune build
 
-run: build
-	./_build/default/main.exe
-
 tests:
 	dune test
 

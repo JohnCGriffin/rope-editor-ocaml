@@ -58,6 +58,7 @@ let default_t =
     settings = default_settings }
   
 let _current =
+  ignore(Curses.setlocale Curses.lC_ALL "");
   let win = Curses.initscr() in
   ignore(keypad win true);
   ignore(noecho());
