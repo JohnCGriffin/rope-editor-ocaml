@@ -1,8 +1,5 @@
 
 
-run: build
-	./_build/default/main.exe
-
 build:
 	dune build
 
