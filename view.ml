@@ -3,6 +3,15 @@ open Curses
 open Ropes
 open Printf
 
+let status_left_right status_w left right : unit =
+  ignore(wclrtoeol status_w);
+  ignore(wmove status_w 0 0);
+  ignore(waddstr status_w left);
+  let _,x = getmaxyx status_w in
+  ignore(wmove status_w 0 (x - String.length right));
+  ignore(waddstr status_w right)
+
+
 let without_nl text =
   let len = Ustring.length text in
   if len > 0 && Ustring.get text (len-1) = (Uchar.of_int 10) then
@@ -87,11 +96,16 @@ let view (e:Model.t) : Model.t =
   loop 0 top_ndx;
   let status_w = windows.status_w in
 
+  status_left_right status_w (Printf.sprintf "location: %d %d" e.loc.line_offset e.loc.char_offset)
+    "sample";
+  (*
+
   ignore(wstandout status_w);
   ignore(werase status_w);
   ignore(wmove status_w 0 0);
-  ignore(waddstr status_w (Printf.sprintf "location: %d %d" e.loc.line_offset e.loc.char_offset));
+  ignore(waddstr status_w 
   ignore(wstandend status_w);
+   *)
 
   Windows.refresh ~cursor_y:!cursor_y ~cursor_x:!cursor_x ();
   e

@@ -43,6 +43,7 @@ let create settings : t =
                 else
                   newwin 0 0 (-1) (-1)
   in
+  ignore(wbkgd status_w A.reverse);
   { edit_w; numbers_w; status_w; entry_w; diags_w; settings }
                 
 
