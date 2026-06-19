@@ -38,8 +38,8 @@ let move_down (e:t) : t =
 let move_up (e:t) : t =
   if e.loc.line_offset > 0 then
     let loc = location_of (e.loc.line_offset-1) 0 in
-    let top_offset = e.top_offset -1 in
-    { e with loc; top_offset }
+    let top_offset = max 0 (e.top_offset - 1) in
+    { e with loc ; top_offset }
   else
     e
 
