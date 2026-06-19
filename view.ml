@@ -14,10 +14,10 @@ let height_in_lines width text : int =
   1 + (Ustring.length text / width)
 
 let get_desired_top_lines w (e:Model.t) : int =
-  let _, screen_cols = getmaxyx w in
+  let screen_lines, screen_cols = getmaxyx w in
   let height_of = height_in_lines screen_cols in
   let active_ndx = e.loc.line_offset in
-  let max_visual_rows = e.top_offset in
+  let max_visual_rows = screen_lines-2 in
   let rec loop i visual_so_far =
     if i >= active_ndx then i
     else
