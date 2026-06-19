@@ -20,6 +20,16 @@ let main raw_bytes : unit =
     | "KEY_LEFT" -> loop (move_left e)
     | "KEY_HOME" -> loop (move_top e)
     | "KEY_END" -> loop (move_bottom e)
+    | "d" ->
+       let windows = Windows.get() in
+       let diags_width =
+         if windows.settings.diags_width > 0 then
+           0
+         else
+           30
+       in
+       Windows.set_diags_width diags_width;
+       loop e
     | _ -> ()
   in
   loop e

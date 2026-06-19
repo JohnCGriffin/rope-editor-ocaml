@@ -68,7 +68,8 @@ let _current =
   let lines,cols = get_size () in
   let settings = { default_settings with lines; cols } in
   ref (create settings)
-  
+
+let acs = get_acs_codes ()
 
 let destroy () : unit =
   let tmp = !_current in

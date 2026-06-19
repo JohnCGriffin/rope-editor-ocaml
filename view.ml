@@ -98,14 +98,12 @@ let view (e:Model.t) : Model.t =
 
   status_left_right status_w (Printf.sprintf "location: %d %d" e.loc.line_offset e.loc.char_offset)
     "sample";
-  (*
 
-  ignore(wstandout status_w);
-  ignore(werase status_w);
-  ignore(wmove status_w 0 0);
-  ignore(waddstr status_w 
-  ignore(wstandend status_w);
-   *)
+  ignore(wvline windows.diags_w (Acs.sbsb Windows.acs) screen_lines);
+  ignore(wmove windows.diags_w 0 1);
+  ignore(waddstr windows.diags_w "DIAGS");
+         
+
 
   Windows.refresh ~cursor_y:!cursor_y ~cursor_x:!cursor_x ();
   e
