@@ -84,5 +84,5 @@ let view (e:Model.t) : Model.t =
   ignore(wstandend status_w);
 
   Windows.refresh ~cursor_y:!cursor_y ~cursor_x:!cursor_x ();
-  e
+  { e with top_offset }
 
