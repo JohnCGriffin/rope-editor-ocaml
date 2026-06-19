@@ -1,7 +1,7 @@
 
 open Curses
 open Ropes
-
+open Printf
 
 let without_nl text =
   let len = Ustring.length text in
@@ -30,9 +30,11 @@ let get_desired_top_lines w (e:Model.t) : int =
 
 
 let view (e:Model.t) : Model.t =
+  let active_ndx = e.loc.line_offset in
+  Windows.set_numbers_width_by_example (10 + active_ndx);
   let windows = Windows.get() in
   let edit_w = windows.edit_w in
-  let active_ndx = e.loc.line_offset in
+  let numbers_w = windows.numbers_w in
   let line_count = Rope.line_count e.rope in
   let screen_lines,_ = getmaxyx edit_w in
 
@@ -47,13 +49,21 @@ let view (e:Model.t) : Model.t =
   let top_ndx = max 0 (active_ndx - desired_top_lines) in
   let cursor_x = ref 0 in
   let cursor_y = ref 0 in
+
+  List.iter (fun w -> ignore(werase w); ignore(wmove w 0 0))
+    [ edit_w; numbers_w ];
   
-  ignore(werase edit_w);
   let rec loop screen_line ndx : unit =
     if screen_line < screen_lines && ndx < line_count then (
       let loc = Model.location_of ndx 0 in
       let utext = Rope.line_at e.rope loc |> without_nl in
       let stext = Ustring.string_of utext in
+
+      let attr = if ndx = active_ndx then A.bold else A.dim in
+      ignore(wattrset numbers_w attr);
+      ignore(wmove numbers_w screen_line 0);
+      ignore(waddstr numbers_w (sprintf "%d " (ndx+1)));
+      ignore(wattroff numbers_w attr);
 
       (* This is intended to draw the current line up to the
          char_offset, then remember the position for final
@@ -67,7 +77,7 @@ let view (e:Model.t) : Model.t =
         cursor_x := x + begin_x;
         cursor_y := y;
       );
-      
+
       ignore(wmove edit_w screen_line 0);
       ignore(waddstr edit_w stext);
       let y,_ = getyx edit_w in

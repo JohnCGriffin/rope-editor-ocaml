@@ -22,6 +22,7 @@ type t = {
 val get : unit -> t
 val set_diags_width : int -> unit
 val set_numbers_width : int -> unit
+val set_numbers_width_by_example : int -> unit
 val destroy : unit -> unit
 val refresh : cursor_y:int -> cursor_x:int -> unit -> unit
 

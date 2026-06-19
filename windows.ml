@@ -94,7 +94,11 @@ let set_numbers_width width : unit =
   let settings = (!_current).settings in
   if width <> settings.numbers_width then
     destroy();
-    _current := create { settings with numbers_width = width }
+  _current := create { settings with numbers_width = width }
+
+let set_numbers_width_by_example num : unit =
+  let text = Printf.sprintf "%d  " num in
+  set_numbers_width (String.length text)
 
 let refresh ~cursor_y ~cursor_x () : unit =
   let current = get() in
