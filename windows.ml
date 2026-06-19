@@ -24,12 +24,12 @@ let create settings : t =
   let edit_height = settings.lines - settings.status_height - settings.entry_height in
   let edit_w = newwin edit_height edit_width 0 settings.numbers_width in
   let diags_w = if settings.diags_width > 0 then
-                  newwin edit_height settings.diags_width 0 settings.numbers_width
+                  newwin edit_height settings.diags_width 0 (settings.cols - settings.diags_width)
                 else
                   newwin 0 0 (-1) (-1)
   in
   let numbers_w = if settings.numbers_width > 0 then
-                    newwin edit_height settings.numbers_width 0 (settings.cols - settings.numbers_width)
+                    newwin edit_height settings.numbers_width 0 0
                   else
                     newwin 0 0 (-1) (-1)
   in
@@ -47,7 +47,7 @@ let create settings : t =
                 
 
 let default_settings =
-  { diags_width = 0; numbers_width = 9; status_height = 1; entry_height = 1; lines = 0; cols = 0 }
+  { diags_width = 0; numbers_width = 7; status_height = 1; entry_height = 1; lines = 0; cols = 0 }
 
 let default_t =
   { edit_w = null_window;
