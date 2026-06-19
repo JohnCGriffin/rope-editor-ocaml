@@ -1,0 +1,12 @@
+
+Github
+
+Fix top_offset bugs in view
+
+Added status, diag, number windows
+
+Separate command structure
+
+Undo
+
+
